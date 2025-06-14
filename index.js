@@ -21,15 +21,35 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
+    const database = client.db("BackToYouDB");
+    const itemsCollections = database.collection("items");
+    const usersCollection = database.collection("users");
 
-      const database = client.db("BackToYouDB");
-      const itemsCollections = database.collection("items")
-      
-      app.get('/items', async (req, res) => {
-          const result = await itemsCollections.find().toArray()
-          res.send(result)
-      })
-      
+    app.get("/items", async (req, res) => {
+      const result = await itemsCollections.find().toArray();
+      res.send(result);
+    });
+
+    // user related API
+    app.get("/users", async (req, res) => {
+      const cursor = usersCollection.find();
+      const result =await cursor.toArray();
+      res.send(result);
+    });
+
+    app.post("/users", async (req, res) => {
+      const cursor = req.body;
+      const exitingUser = await usersCollection.findOne({
+        email: cursor.email,
+      });
+      if (exitingUser) {
+        res.send(exitingUser);
+      } else {
+        const result = await usersCollection.insertOne(cursor);
+        res.send(result);
+      }
+    });
+
   } finally {
   }
 }
