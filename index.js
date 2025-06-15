@@ -31,6 +31,12 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/my-items", async (req, res) => {
+      const email = req.query.email;
+      const items = await itemsCollections.find({ userEmail: email }).toArray();
+      res.send(items);
+    });
+
     app.get("/item/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
