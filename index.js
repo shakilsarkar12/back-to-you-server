@@ -30,6 +30,12 @@ async function run() {
       res.send(result);
     });
 
+    app.post("/addItems", async (req, res) => {
+      const cursor = req.body;
+      const result = await itemsCollections.insertOne(cursor)
+      res.send(result);
+    });
+
     // user related API
     app.get("/users", async (req, res) => {
       const cursor = usersCollection.find();
