@@ -7,7 +7,7 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const uri = process.env.DB_URI;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -30,6 +30,12 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/item/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await itemsCollections.findOne(query);
+      res.send(result);
+    });
     app.post("/addItems", async (req, res) => {
       const cursor = req.body;
       const result = await itemsCollections.insertOne(cursor)
