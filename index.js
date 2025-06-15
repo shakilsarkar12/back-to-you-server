@@ -37,6 +37,23 @@ async function run() {
       const result = await itemsCollections.findOne(query);
       res.send(result);
     });
+
+    app.patch("/item/:id", async (req, res) => {
+      const id = req.params.id;
+      const { status } = req.body;
+
+      const result = await itemsCollections.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: { status: status } }
+      );
+
+      if (result.modifiedCount > 0) {
+        res.status(200).send({ message: "Status updated successfully" });
+      } else {
+        res.status(404).send({ message: "Item not found or already updated" });
+      }
+    });
+    ;
   
     app.post("/addItems", async (req, res) => {
       const cursor = req.body;
