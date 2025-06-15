@@ -24,6 +24,7 @@ async function run() {
     const database = client.db("BackToYouDB");
     const itemsCollections = database.collection("items");
     const usersCollection = database.collection("users");
+    const recoveriesCollection = database.collection("recoveries");
 
     app.get("/items", async (req, res) => {
       const result = await itemsCollections.find().toArray();
@@ -36,9 +37,17 @@ async function run() {
       const result = await itemsCollections.findOne(query);
       res.send(result);
     });
+  
     app.post("/addItems", async (req, res) => {
       const cursor = req.body;
       const result = await itemsCollections.insertOne(cursor)
+      res.send(result);
+    });
+
+    // recovery API
+    app.post("/recoveries", async (req, res) => {
+      const cursor = req.body;
+      const result = await recoveriesCollection.insertOne(cursor);
       res.send(result);
     });
 
