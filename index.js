@@ -84,6 +84,12 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/latestItems", async (req, res) => {
+      const short = { date: -1 };
+      const result = await itemsCollections.find().sort(short).limit(6).toArray();
+      res.send(result);
+    });
+
     // recovery API
     app.post("/recoveries", async (req, res) => {
       const cursor = req.body;
