@@ -43,16 +43,16 @@ async function run() {
       const result = await itemsCollections.findOne(query);
       res.send(result);
     });
-    
-    app.patch("/updateitem/:id", async (req, res) => {
-        const { id } = req.params;
-        const updatedData = req.body;
 
-        const result = await itemsCollections.updateOne(
-          { _id: new ObjectId(id) },
-          { $set: updatedData }
-        );
-        res.send(result);
+    app.patch("/updateitem/:id", async (req, res) => {
+      const { id } = req.params;
+      const updatedData = req.body;
+
+      const result = await itemsCollections.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: updatedData }
+      );
+      res.send(result);
     });
 
     app.patch("/item/:id", async (req, res) => {
@@ -70,18 +70,17 @@ async function run() {
         res.status(404).send({ message: "Item not found or already updated" });
       }
     });
-    
+
     app.delete("/item/:id", async (req, res) => {
-      const id = req.params.id;
       console.log(id);
       const doc = { _id: new ObjectId(id) };
       const result = await itemsCollections.deleteOne(doc);
       res.send(result);
     });
-  
+
     app.post("/addItems", async (req, res) => {
       const cursor = req.body;
-      const result = await itemsCollections.insertOne(cursor)
+      const result = await itemsCollections.insertOne(cursor);
       res.send(result);
     });
 
@@ -92,10 +91,31 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/recoveredItems", async (req, res) => {
+      const email = req.query.email;
+      if (!email) {
+        return res.status(400).send({ error: "Email query is required" });
+      }
+      const query = { "recoveredBy.email": email };
+      const recoveredDocs = await recoveriesCollection.find(query).toArray();
+      const recoveredItemsWithDetails = await Promise.all(
+        recoveredDocs.map(async (recovery) => {
+          const itemDoc = await itemsCollections.findOne({
+            _id: new ObjectId(recovery.itemId),
+          });
+          return {
+            recovery,
+            item: itemDoc,
+          };
+        })
+      );
+      res.send(recoveredItemsWithDetails);
+    });
+
     // user related API
     app.get("/users", async (req, res) => {
       const cursor = usersCollection.find();
-      const result =await cursor.toArray();
+      const result = await cursor.toArray();
       res.send(result);
     });
 
@@ -111,7 +131,6 @@ async function run() {
         res.send(result);
       }
     });
-
   } finally {
   }
 }
