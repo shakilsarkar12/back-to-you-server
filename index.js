@@ -72,7 +72,7 @@ async function run() {
     });
 
     app.delete("/item/:id", async (req, res) => {
-      const id = req.params.id
+      const id = req.params.id;
       const doc = { _id: new ObjectId(id) };
       const result = await itemsCollections.deleteOne(doc);
       res.send(result);
@@ -86,7 +86,11 @@ async function run() {
 
     app.get("/latestItems", async (req, res) => {
       const short = { date: -1 };
-      const result = await itemsCollections.find().sort(short).limit(6).toArray();
+      const result = await itemsCollections
+        .find()
+        .sort(short)
+        .limit(6)
+        .toArray();
       res.send(result);
     });
 
@@ -116,6 +120,19 @@ async function run() {
         })
       );
       res.send(recoveredItemsWithDetails);
+    });
+
+    // Site Statistics API
+    app.get("/siteStats", async (req, res) => {
+      const lostCount = await itemsCollections.countDocuments({ type: "Lost" });
+      const foundCount = await itemsCollections.countDocuments({type: "Found",});
+      const recoveredCount = await recoveriesCollection.estimatedDocumentCount();
+
+      res.send({
+        lostCount,
+        foundCount,
+        recoveredCount,
+      });
     });
 
     // user related API
