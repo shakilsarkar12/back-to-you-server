@@ -43,6 +43,17 @@ async function run() {
       const result = await itemsCollections.findOne(query);
       res.send(result);
     });
+    
+    app.patch("/updateitem/:id", async (req, res) => {
+        const { id } = req.params;
+        const updatedData = req.body;
+
+        const result = await itemsCollections.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: updatedData }
+        );
+        res.send(result);
+    });
 
     app.patch("/item/:id", async (req, res) => {
       const id = req.params.id;
