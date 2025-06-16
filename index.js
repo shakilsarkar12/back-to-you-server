@@ -70,7 +70,14 @@ async function run() {
         res.status(404).send({ message: "Item not found or already updated" });
       }
     });
-    ;
+    
+    app.delete("/item/:id", async (req, res) => {
+      const id = req.params.id;
+      console.log(id);
+      const doc = { _id: new ObjectId(id) };
+      const result = await itemsCollections.deleteOne(doc);
+      res.send(result);
+    });
   
     app.post("/addItems", async (req, res) => {
       const cursor = req.body;
