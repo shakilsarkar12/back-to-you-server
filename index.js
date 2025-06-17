@@ -2,10 +2,37 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const app = express();
+const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
 const port = process.env.PORT || 3000;
 
-app.use(cors());
+app.use(
+  cors({
+    origin: ["http://localhost:5173", "https://backtoyou-0.web.app"],
+    credentials: true,
+  })
+);
 app.use(express.json());
+app.use(cookieParser());
+
+const logger = (req, res, next) => {
+  console.log("inside the logger");
+  next();
+};
+
+const veryfyToken = (req, res, next) => {
+  const token = req?.cookies?.token;
+  if (!token) {
+    return res.status(401).send({ message: "unauthorized access" });
+  }
+  jwt.verify(token, process.env.JWT_ACCESS_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(401).send({ message: "unauthorized access" });
+    }
+    req.decoded = decoded;
+    next();
+  });
+};
 
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const uri = process.env.DB_URI;
@@ -26,18 +53,54 @@ async function run() {
     const usersCollection = database.collection("users");
     const recoveriesCollection = database.collection("recoveries");
 
+    // JWT token related API
+    app.post("/jwt", async (req, res) => {
+      const { email } = req.body;
+      const user = { email };
+      const token = jwt.sign(user, process.env.JWT_ACCESS_SECRET, {
+        expiresIn: "1h",
+      });
+
+      res.cookie("token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+      });
+      res.send({ success: true });
+    });
+
+    app.post("/logout", (req, res) => {
+      res.clearCookie("token", {
+        httpOnly: true,
+        secure: false,
+        sameSite: "lax",
+      });
+      res.send({ success: true });
+    });
+
     app.get("/items", async (req, res) => {
       const result = await itemsCollections.find().toArray();
       res.send(result);
     });
 
-    app.get("/my-items", async (req, res) => {
+    app.get("/my-items", veryfyToken, async (req, res) => {
       const email = req.query.email;
+
+      if (email !== req.decoded.email) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+
       const items = await itemsCollections.find({ userEmail: email }).toArray();
       res.send(items);
     });
 
-    app.get("/item/:id", async (req, res) => {
+    app.get("/item/:id", veryfyToken, async (req, res) => {
+      const email = req.query.email;
+
+      if (email !== req.decoded.email) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await itemsCollections.findOne(query);
@@ -55,7 +118,13 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("/item/:id", async (req, res) => {
+    app.patch("/item/:id", veryfyToken, async (req, res) => {
+      const email = req?.query?.email;
+
+      if (email !== req.decoded.email) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+
       const id = req.params.id;
       const { status } = req.body;
 
@@ -71,15 +140,25 @@ async function run() {
       }
     });
 
-    app.delete("/item/:id", async (req, res) => {
+    app.delete("/item/:id", veryfyToken, async (req, res) => {
+      const email = req.query.email;
+
+      if (email !== req.decoded.email) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+
       const id = req.params.id;
       const doc = { _id: new ObjectId(id) };
       const result = await itemsCollections.deleteOne(doc);
       res.send(result);
     });
 
-    app.post("/addItems", async (req, res) => {
+    app.post("/addItems", veryfyToken, async (req, res) => {
       const cursor = req.body;
+
+      if (cursor?.userEmail !== req.decoded.email) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
       const result = await itemsCollections.insertOne(cursor);
       res.send(result);
     });
@@ -95,17 +174,25 @@ async function run() {
     });
 
     // recovery API
-    app.post("/recoveries", async (req, res) => {
+    app.post("/recoveries", veryfyToken, async (req, res) => {
       const cursor = req.body;
+      if (cursor?.recoveredBy?.email !== req.decoded.email) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
       const result = await recoveriesCollection.insertOne(cursor);
       res.send(result);
     });
 
-    app.get("/recoveredItems", async (req, res) => {
+    app.get("/recoveredItems", veryfyToken, async (req, res) => {
       const email = req.query.email;
       if (!email) {
         return res.status(400).send({ error: "Email query is required" });
       }
+
+      if (email !== req.decoded.email) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+
       const query = { "recoveredBy.email": email };
       const recoveredDocs = await recoveriesCollection.find(query).toArray();
       const recoveredItemsWithDetails = await Promise.all(
@@ -125,8 +212,11 @@ async function run() {
     // Site Statistics API
     app.get("/siteStats", async (req, res) => {
       const lostCount = await itemsCollections.countDocuments({ type: "Lost" });
-      const foundCount = await itemsCollections.countDocuments({type: "Found",});
-      const recoveredCount = await recoveriesCollection.estimatedDocumentCount();
+      const foundCount = await itemsCollections.countDocuments({
+        type: "Found",
+      });
+      const recoveredCount =
+        await recoveriesCollection.estimatedDocumentCount();
 
       res.send({
         lostCount,
