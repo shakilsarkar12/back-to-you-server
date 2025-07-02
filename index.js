@@ -79,9 +79,51 @@ async function run() {
     });
 
     app.get("/items", async (req, res) => {
-      const result = await itemsCollections.find().toArray();
-      res.send(result);
+      try {
+        const {
+          search = "",
+          category = "",
+          location = "",
+          sort = "newest",
+          page = 1,
+          limit = 12,
+        } = req.query;
+
+        const query = {};
+
+        if (search) {
+          const regex = new RegExp(search, "i");
+          query.$or = [{ title: regex }, { location: regex }];
+        }
+
+        if (category && category !== "All") {
+          query.category = category;
+        }
+
+        if (location && location !== "All") {
+          query.location = location;
+        }
+
+        const sortOrder = sort === "oldest" ? 1 : -1;
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+
+        const totalCount = await itemsCollections.countDocuments(query);
+        const totalPages = Math.ceil(totalCount / parseInt(limit));
+
+        const items = await itemsCollections
+          .find(query)
+          .sort({ date: sortOrder })
+          .skip(skip)
+          .limit(parseInt(limit))
+          .toArray();
+
+        res.send({ items, totalPages });
+      } catch (error) {
+        console.error("Failed to fetch items:", error);
+        res.status(500).send({ error: "Failed to fetch items" });
+      }
     });
+    
 
     app.get("/my-items", veryfyToken, async (req, res) => {
       const email = req.query.email;
@@ -168,7 +210,7 @@ async function run() {
       const result = await itemsCollections
         .find()
         .sort(short)
-        .limit(6)
+        .limit(8)
         .toArray();
       res.send(result);
     });
