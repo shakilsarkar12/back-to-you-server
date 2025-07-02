@@ -52,6 +52,7 @@ async function run() {
     const itemsCollections = database.collection("items");
     const usersCollection = database.collection("users");
     const recoveriesCollection = database.collection("recoveries");
+    const messagesCollection = database.collection("messages");
 
     // JWT token related API
     app.post("/jwt", async (req, res) => {
@@ -123,7 +124,6 @@ async function run() {
         res.status(500).send({ error: "Failed to fetch items" });
       }
     });
-    
 
     app.get("/my-items", veryfyToken, async (req, res) => {
       const email = req.query.email;
@@ -225,6 +225,12 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/allrecoveredItems", async (req, res) => {
+      const query = { status: "recovered" };
+      const items = await itemsCollections.find(query).toArray();
+      res.send(items);
+    });
+
     app.get("/recoveredItems", veryfyToken, async (req, res) => {
       const email = req.query.email;
       if (!email) {
@@ -284,6 +290,25 @@ async function run() {
       } else {
         const result = await usersCollection.insertOne(cursor);
         res.send(result);
+      }
+    });
+
+    // contact api
+    app.post("/messages", async (req, res) => {
+      try {
+        const messageData = req.body;
+        const result = await messagesCollection.insertOne(messageData);
+        res.send({
+          success: true,
+          message: "Message received!",
+          insertedId: result.insertedId,
+        });
+      } catch (err) {
+        res.status(500).send({
+          success: false,
+          message: "Failed to send message",
+          error: err,
+        });
       }
     });
   } finally {
