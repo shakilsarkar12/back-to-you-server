@@ -323,3 +323,5 @@ app.get("/", (req, res) => {
 app.listen(port, () => {
   console.log("server is running on poer", port);
 });
+
+module.exports = app;
