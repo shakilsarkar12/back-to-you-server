@@ -8,7 +8,7 @@ const port = process.env.PORT || 3000;
 
 app.use(
   cors({
-    origin: ["http://localhost:5173", "https://backtoyou-0.web.app", "https://backtoyou.shakildev.online/"],
+    origin: ["http://localhost:5173", "https://backtoyou-0.web.app", "https://backtoyou.shakildev.online"],
     credentials: true,
   })
 );
